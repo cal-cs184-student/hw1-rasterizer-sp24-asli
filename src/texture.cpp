@@ -1,6 +1,5 @@
 #include "texture.h"
 #include "CGL/color.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -8,44 +7,133 @@ namespace CGL {
 
   Color Texture::sample(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+      double level;
 
+      // Determine the sampling method based on `lsm`
+      switch (sp.lsm) {
+      case L_ZERO:
+          // Use zero-th level
+          level = 0;
+          break;
+      case L_NEAREST:
+          // Compute nearest mipmap level
+          level = std::round(get_level(sp));
+          break;
+      case L_LINEAR:
+          // Compute mipmap level as a continuous number
+          level = get_level(sp);
+          // Take samples from adjacent mipmap levels
+          int level0 = std::floor(level);
+          int level1 = std::ceil(level);
+          double weight = level - level0;
+          Color color0 = sample_bilinear(sp.p_uv, level0);
+          Color color1 = sample_bilinear(sp.p_uv, level1);
+          // Compute a weighted sum of the two samples
+          return color0 * (1 - weight) + color1 * weight;
+       
+      
+      }
 
-// return magenta for invalid level
-    return Color(1, 0, 1);
+      // Sample from the determined mipmap level
+      if (sp.psm == P_NEAREST) {
+          return sample_nearest(sp.p_uv, level);
+      }
+      else if (sp.psm == P_LINEAR) {
+          return sample_bilinear(sp.p_uv, level);
+      }
+      //else {
+          //return Color(1, 0, 1); // Magenta for invalid sampling method
+      //}
   }
 
   float Texture::get_level(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+    // Step 1: Compute Derivatives
+      Vector2D duv_dx = sp.p_dx_uv - sp.p_uv;
+      Vector2D duv_dy = sp.p_dy_uv - sp.p_uv;
 
+      // Step 2: Calculate Mipmap Level
+      // Scale the derivatives by the texture size
+      duv_dx.x *= width;
+      duv_dx.y *= width;
+      duv_dy.x *= height;
+      duv_dy.y *= height;
 
+      // Choose the largest magnitude between the two derivatives
+      float L = std::max(std::sqrt(duv_dx.x * duv_dx.x + duv_dx.y * duv_dx.y),
+          std::sqrt(duv_dy.x * duv_dy.x + duv_dy.y * duv_dy.y));
 
-    return 0;
+      // Calculate level as the log2 of the largest derivative
+      return L > 0 ? std::min(static_cast<int>(std::log2(L)), (int)mipmap.size()) : 0;
   }
 
   Color MipLevel::get_texel(int tx, int ty) {
     return Color(&texels[tx * 3 + ty * width * 3]);
   }
 
+
   Color Texture::sample_nearest(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
-    auto& mip = mipmap[level];
+       // Step 1: Check for a valid mipmap level
+      if (level < 0 || level >= mipmap.size()) {
+          return Color(1, 0, 1); // magenta for an invalid level
+      }
 
+      // Step 2: Retrieve the appropriate mipmap level (assuming mipmap is a std::vector<MipLevel>)
+      auto& mip = mipmap[level];
 
+      // Step 3: Scale the UV coordinates
+      float u = uv.x * (mip.width - 1);
+      float v = uv.y * (mip.height - 1);
 
+      // Step 4: Find the nearest texel coordinates
+      int x = static_cast<int>(std::round(u));
+      int y = static_cast<int>(std::round(v));
 
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+      // Step 5: Retrieve the texel color
+      Color color = mip.get_texel(x, y);
+
+      // Step 6: Return the texel color
+      return color;
   }
 
   Color Texture::sample_bilinear(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
-    auto& mip = mipmap[level];
+      // Step 1: Validate Mipmap Level
+      if (level < 0 || level >= mipmap.size()) {
+          return Color(1, 0, 1); // Magenta for an invalid level
+      }
 
+      // Step 2: Retrieve Mipmap Level
+      auto& mip = mipmap[level];
 
+      // Step 3: Scale UV Coordinates
+      float u = uv.x * (mip.width - 1);
+      float v = uv.y * (mip.height - 1);
 
+      // Step 4: Calculate Texel Indices
+      int x0 = static_cast<int>(floor(u));
+      int y0 = static_cast<int>(floor(v));
+      int x1 = static_cast<int>(ceil(u));
+      int y1 = static_cast<int>(ceil(v));
 
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+      // Step 5: Retrieve Texel Colors
+      Color c00 = mip.get_texel(x0, y0);
+      Color c10 = mip.get_texel(x1, y0);
+      Color c01 = mip.get_texel(x0, y1);
+      Color c11 = mip.get_texel(x1, y1);
+
+      // Step 6: Interpolate Horizontally
+      float s = u - x0;
+      Color top = c00 * (1 - s) + c10 * s;
+      Color bottom = c01 * (1 - s) + c11 * s;
+
+      // Step 7: Interpolate Vertically
+      float t = v - y0;
+      Color finalColor = top * (1 - t) + bottom * t;
+
+      // Step 8: Return Final Color
+      return finalColor;
   }
 
 

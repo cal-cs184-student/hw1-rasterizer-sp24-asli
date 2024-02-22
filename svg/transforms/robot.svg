@@ -50,6 +50,7 @@
 
 	<g transform="translate(-90 -40)">
 		<g transform="scale(.6 .2)">
+			
 			<polygon fill="#EF161F" points="-50,-50 50,-50 -50,50 "/>
 			<polygon fill="#EF161F" points="-50,50 50,-50 50,50"/>
 		</g>
@@ -62,7 +63,8 @@
 	</g>
 
 
-	<g transform="translate(90 -40)">
+	<g transform="translate(90 -25)">
+		<g transform="rotate(25)">
 		<g transform="scale(.6 .2)">
 			<polygon fill="#EF161F" points="-50,-50 50,-50 -50,50 "/>
 			<polygon fill="#EF161F" points="-50,50 50,-50 50,50"/>
@@ -76,6 +78,7 @@
 	</g>
 
 </g>
+</g>	
 
 
 </svg>
