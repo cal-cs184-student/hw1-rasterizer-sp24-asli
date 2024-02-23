@@ -233,9 +233,9 @@ namespace CGL {
                               bary_dx.x * v0 + bary_dx.y * v1 + bary_dx.z * v2);
                           sp.p_dy_uv = Vector2D(bary_dy.x * u0 + bary_dy.y * u1 + bary_dy.z * u2,
                               bary_dy.x * v0 + bary_dy.y * v1 + bary_dy.z * v2);
-
-                          sp.lsm = lsm;
                           sp.psm = psm;
+                          sp.lsm = lsm;
+ 
 
                           // Sample the texture color using the current texture sampling method
                           Color color = tex.sample(sp);

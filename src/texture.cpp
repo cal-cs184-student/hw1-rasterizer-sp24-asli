@@ -8,38 +8,47 @@ namespace CGL {
   Color Texture::sample(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
       double level;
+      int level0{};
+      int level1{};
+      int weight{};
+      double level_f;
 
       // Determine the sampling method based on `lsm`
-      switch (sp.lsm) {
-      case L_ZERO:
-          // Use zero-th level
-          level = 0;
-          break;
-      case L_NEAREST:
-          // Compute nearest mipmap level
-          level = std::round(get_level(sp));
-          break;
-      case L_LINEAR:
-          // Compute mipmap level as a continuous number
-          level = get_level(sp);
-          // Take samples from adjacent mipmap levels
-          int level0 = std::floor(level);
-          int level1 = std::ceil(level);
-          double weight = level - level0;
-          Color color0 = sample_bilinear(sp.p_uv, level0);
-          Color color1 = sample_bilinear(sp.p_uv, level1);
-          // Compute a weighted sum of the two samples
-          return color0 * (1 - weight) + color1 * weight;
-       
-      
+      if (sp.lsm == L_ZERO) {
+        level = 0; // Use the highest resolution mipmap level
+        level1 = 0;
+        level0 = 0;
+    } else if (sp.lsm == L_NEAREST) {
+        level = get_level(sp); // Compute the nearest mipmap level
+        level = round(level); // Clamp the level
+        level1 = round(level);
+        level0 = round(level);
+        //printf("dd%f",level);
+    } else if (sp.lsm == L_LINEAR) {
+        // Interpolate between two mipmap levels
+        level_f = get_level(sp);
+        //printf("gg%f",level_f);
+        level0 = std::floor(level_f);
+        level1 = std::ceil(level_f);
+        //level0 = std::max(0, std::min(level0, (int)mipmap.size() - 1));
+        //level1 = std::max(0, std::min(level1, (int)mipmap.size() - 1));
+
+        //Color color0 = sample_nearest(sp.p_uv, level0);
+        //Color color1 = sample_nearest(sp.p_uv, level1);
+        weight = level_f - level0;
+        
       }
 
       // Sample from the determined mipmap level
       if (sp.psm == P_NEAREST) {
-          return sample_nearest(sp.p_uv, level);
+          Color color0 = sample_nearest(sp.p_uv, level0);
+          Color color1 = sample_nearest(sp.p_uv, level1);
+          return color0 * weight+color1 * (1-weight);
       }
       else if (sp.psm == P_LINEAR) {
-          return sample_bilinear(sp.p_uv, level);
+          Color color0 = sample_bilinear(sp.p_uv, level0);
+          Color color1 = sample_bilinear(sp.p_uv, level1);
+          return color0 * weight + color1 * (1-weight);
       }
       //else {
           //return Color(1, 0, 1); // Magenta for invalid sampling method
@@ -64,7 +73,7 @@ namespace CGL {
           std::sqrt(duv_dy.x * duv_dy.x + duv_dy.y * duv_dy.y));
 
       // Calculate level as the log2 of the largest derivative
-      return L > 0 ? std::min(static_cast<int>(std::log2(L)), (int)mipmap.size()) : 0;
+      return L > 0 ? std::min(static_cast<double>(std::log2(L)), (double)mipmap.size()) : 0;
   }
 
   Color MipLevel::get_texel(int tx, int ty) {
